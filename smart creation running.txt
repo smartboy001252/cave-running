@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cave Runner Game</title>
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+        background: #000;
+    }
+    canvas {
+        display: block;
+        margin: 0 auto;
+        background: url('https://i.ibb.co/8xqVvK7/cave-background.jpg') no-repeat center center;
+        background-size: cover;
+        border: 3px solid #333;
+    }
+    #score {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 24px;
+        font-weight: bold;
+        color: yellow;
+        text-shadow: 2px 2px 5px black;
+    }
+    #restartBtn {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 15px 30px;
+        font-size: 20px;
+        display: none;
+        cursor: pointer;
+        background: orange;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-weight: bold;
+        box-shadow: 2px 2px 5px black;
+    }
+</style>
+</head>
+<body>
+<div id="score">Score: 0</div>
+<button id="restartBtn" onclick="restartGame()">Restart</button>
+<canvas id="gameCanvas" width="500" height="600"></canvas>
+
+<script>
+// Canvas setup
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let player = { x: 220, y: 520, width: 60, height: 60, dx: 0, dy: 0, jumping: false };
+let rocks = [];
+let score = 0;
+let gameOver = false;
+let rockSpeed = 4;
+let gravity = 0.5;
+
+// Sounds
+const jumpSound = new Audio('https://www.soundjay.com/button/beep-07.mp3');
+const hitSound = new Audio('https://www.soundjay.com/button/beep-10.mp3');
+
+// Controls
+document.addEventListener('keydown', e => {
+    if(e.key === 'ArrowLeft') player.dx = -5;
+    if(e.key === 'ArrowRight') player.dx = 5;
+    if(e.key === 'ArrowUp' && !player.jumping) {
+        player.dy = -10;
+        player.jumping = true;
+        jumpSound.play();
+    }
+});
+document.addEventListener('keyup', e => {
+    if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') player.dx = 0;
+});
+
+// Functions
+function drawPlayer() {
+    ctx.fillStyle = 'blue';
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+}
+
+function createRock() {
+    const rockX = Math.random() * (canvas.width - 50);
+    rocks.push({ x: rockX, y: 0, width: 50, height: 50, scored: false });
+}
+
+function drawRocks() {
+    ctx.fillStyle = 'brown';
+    rocks.forEach(rock => ctx.fillRect(rock.x, rock.y, rock.width, rock.height));
+}
+
+function checkCollision(rock) {
+    return player.x < rock.x + rock.width &&
+           player.x + player.width > rock.x &&
+           player.y < rock.y + rock.height &&
+           player.y + player.height > rock.y;
+}
+
+// Game loop
+function update() {
+    if(gameOver) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Move player
+    player.x += player.dx;
+    if(player.x < 0) player.x = 0;
+    if(player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+    // Apply gravity
+    player.y += player.dy;
+    if(player.y + player.height < canvas.height) {
+        player.dy += gravity;
+    } else {
+        player.y = canvas.height - player.height;
+        player.dy = 0;
+        player.jumping = false;
+    }
+
+    drawPlayer();
+
+    // Generate rocks
+    if(Math.random() < 0.02) createRock();
+
+    // Move rocks
+    rocks.forEach(rock => {
+        rock.y += rockSpeed;
+
+        // Score points when dodged
+        if(rock.y > canvas.height && !rock.scored) {
+            score += 10;
+            rock.scored = true;
+            document.getElementById('score').innerText = 'Score: ' + score;
+
+            // Increase difficulty every 50 points
+            if(score % 50 === 0) rockSpeed += 0.5;
+        }
+
+        // Collision detection
+        if(checkCollision(rock)) {
+            gameOver = true;
+            hitSound.play();
+            document.getElementById('restartBtn').style.display = 'block';
+        }
+    });
+
+    drawRocks();
+
+    if(!gameOver) requestAnimationFrame(update);
+}
+
+// Restart game
+function restartGame() {
+    player = { x: 220, y: 520, width: 60, height: 60, dx: 0, dy: 0, jumping: false };
+    rocks = [];
+    score = 0;
+    rockSpeed = 4;
+    gameOver = false;
+    document.getElementById('score').innerText = 'Score: 0';
+    document.getElementById('restartBtn').style.display = 'none';
+    update();
+}
+
+// Start game
+update();
+</script>
+</body>
+</html>
